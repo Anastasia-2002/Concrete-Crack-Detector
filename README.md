@@ -1,4 +1,19 @@
 # Concrete-Crack-Detector
+[ Input Concrete Image ]
+│
+▼
+[ Data Preprocessing ] ---> Resizing, Normalization, Noise Reduction
+│
+▼
+[ CNN Feature Extractor ] ---> ResNet50 / Custom Convolutional Layers
+│
+▼
+[ Classification & Masking ] ---> Crack Detection Probability + Region Isolation
+│
+▼
+[ User Interface / API Output ] ---> Visualized Bounding Boxes & Health Report
+
+
 A web app with a model in built to detect concrete cracks in bridges
 Repository Structure
 Concrete-Crack-Detector/
