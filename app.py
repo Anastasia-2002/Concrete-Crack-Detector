@@ -17,8 +17,15 @@ class_names = ['Decks', 'Walls'] # Ensure this order matches your model's output
 
 # Path to saved models (ensure these paths are correct relative to where app.py is run)
 # Assuming models are in a 'models' directory in the same location as app.py
-CNN_MODEL_PATH = '/models/custom_cnn.keras'
+CNN_MODEL_PATH = '/content/models/custom_cnn.keras'
 TL_MODEL_PATH = '/content/models/mobilenetv3_transfer.keras'
+import os
+
+# Get the absolute directory where app.py is located
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Build relative path to the model inside your repository
+MODEL_PATH = os.path.join(BASE_DIR, "models", "custom_cnn.keras")
 
 # --- Model Loading with Caching ---
 @st.cache_resource
