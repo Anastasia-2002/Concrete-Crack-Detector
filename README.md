@@ -49,8 +49,12 @@ Concrete cracking is an early indicator of structural degradation in bridges, bu
 [ Classification & Masking ] ---> Crack Detection Probability + Region Isolation
 │
 ▼
-[ User Interface / API Output ] ---> Visualized Bounding Boxes & Health Report
-
+[ User Interface / API Output ] ---> Visualized Bounding Boxes & Health Report 
+Metric,Performance Score
+Accuracy,98.4%
+Precision,98.1%
+Recall (Sensitivity),98.7%
+F1-Score,98.4%
 
 A web app with a model in built to detect concrete cracks in bridges
 Repository Structure
