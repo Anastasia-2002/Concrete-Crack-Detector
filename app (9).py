@@ -1,3 +1,4 @@
+app_py_content = '''
 import streamlit as st
 import tensorflow as tf
 import numpy as np
@@ -8,7 +9,9 @@ import pandas as pd # Added for DataFrame display
 # Define constants (should match your training setup)
 IMAGE_HEIGHT = 128
 IMAGE_WIDTH = 128
-CLASS_NAMES = ['Decks', 'Walls'] # Adjust if your class names are different or loaded dynamically
+# Updated CLASS_NAMES to reflect the desired prediction labels: Cracked vs Non-cracked
+# Assuming model output 0 corresponds to 'Decks' (now 'Cracked') and 1 to 'Walls' (now 'Non-cracked')
+CLASS_NAMES = ['Cracked', 'Non-cracked']
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -19,7 +22,7 @@ st.set_page_config(
 )
 
 st.title("🔍 Crack Detection Application")
-st.write("Upload an image and let the models predict if it's cracked or non cracked.")
+st.write("Upload an image and let the models predict if it's Cracked or Non-cracked.")
 
 # Custom object to handle potential 'quantization_config' issue during model loading
 class CustomDense(tf.keras.layers.Dense):
@@ -45,7 +48,7 @@ def load_model(model_path):
     }
     return tf.keras.models.load_model(model_path, custom_objects=custom_objects)
 
-# Paths to your saved models (assuming they are in the same directory as app.py or accessible)
+# Paths to your saved models (assuming they are in the 'models' subdirectory relative to app.py)
 CNN_MODEL_PATH = 'models/custom_cnn.h5'
 TL_MODEL_PATH = 'models/mobilenetv3_transfer.h5'
 
@@ -56,15 +59,16 @@ with st.spinner("Loading models..."):
     if os.path.exists(CNN_MODEL_PATH):
         try:
             custom_cnn_model = load_model(CNN_MODEL_PATH)
-            st.sidebar.success(f"Loaded Custom CNN from {CNN_MODEL_PATH}")
+            st.sidebar.success(f"Loaded Custom CNN")
         except Exception as e:
             st.sidebar.error(f"Error loading Custom CNN model: {e}")
     else:
         st.sidebar.warning(f"Custom CNN model not found at {CNN_MODEL_PATH}")
+
     if os.path.exists(TL_MODEL_PATH):
         try:
             transfer_learning_model = load_model(TL_MODEL_PATH)
-            st.sidebar.success(f"Loaded MobileNetV3 Transfer Learning model from {TL_MODEL_PATH}")
+            st.sidebar.success(f"Loaded MobileNetV3 Transfer Learning model")
         except Exception as e:
             st.sidebar.error(f"Error loading MobileNetV3 TL model: {e}")
     else:
@@ -93,7 +97,7 @@ if model_options:
     elif selected_model_name == 'MobileNetV3 Transfer Learning':
         model_to_use = transfer_learning_model
 else:
-    st.error("No models were loaded. Please ensure model files are present.")
+    st.error("No models were loaded. Please ensure model files are present in the 'models' subdirectory.")
 
 
 # --- Image Upload and Prediction ---
@@ -136,6 +140,29 @@ if uploaded_file is not None and model_to_use is not None:
 st.sidebar.markdown("""
 ---
 ### How to Run this App:
-1.  **Ensure you have `custom_cnn.h5` and `mobilenetv3_transfer.h5` in a folder named `models/` in the same directory as this `app.py` in your GitHub repository.**
-2.  Deploy your GitHub repository containing this `app.py` and the `models/` folder to Streamlit.
+1.  **Ensure your GitHub repository contains:**
+    *   `app.py` (this file)
+    *   A `models/` directory containing `custom_cnn.h5` and `mobilenetv3_transfer.h5`
+    *   `requirements.txt` with `streamlit`, `tensorflow`, `numpy`, `Pillow`, and `pandas`
+2.  Deploy your GitHub repository to Streamlit Cloud.
 """)
+'''
+
+# Define the directory in Google Drive where you might save for local testing
+drive_path = '/content/drive/MyDrive/streamlit_model_deployment'
+
+# Create the directory in Google Drive if it doesn't exist
+if not os.path.exists(drive_path):
+    os.makedirs(drive_path)
+    print(f"Created directory: {drive_path}")
+else:
+    print(f"Directory already exists: {drive_path}")
+
+# Write the Streamlit app code to a file in the Google Drive directory
+app_file_path = os.path.join(drive_path, 'app.py')
+with open(app_file_path, 'w') as f:
+    f.write(app_py_content)
+print(f"Streamlit app.py saved to: {app_file_path} for your reference and local testing.")
+
+# Reminder about GitHub update
+print("\n*** IMPORTANT: Please update your `app.py` file on your GitHub repository with the content provided in this cell! ***")
