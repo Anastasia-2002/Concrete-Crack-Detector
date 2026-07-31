@@ -5,37 +5,38 @@ import tensorflow as tf
 from PIL import Image
 
 # -----------------------------------------------------------------------------
-# 1. Page Configuration & Title
+# Custom Deserializer Fix for Keras 3 Compatibility
 # -----------------------------------------------------------------------------
-st.set_page_config(page_title="Concrete Crack Detector", page_icon="🧱", layout="centered")
+class FixedDense(tf.keras.layers.Dense):
+    @classmethod
+    def from_config(cls, config):
+        config.pop('quantization_config', None)
+        return super().from_config(config)
 
-st.title("🧱 Concrete Crack Detector")
-st.write("Upload an image of a concrete surface to detect whether it contains cracks.")
-
-# -----------------------------------------------------------------------------
-# 2. Parameters & Model Path
-# -----------------------------------------------------------------------------
-IMAGE_HEIGHT = 224
-IMAGE_WIDTH = 224
-CLASS_NAMES = ['Decks', 'Walls']  # Adjust if your classes are ['No Crack', 'Crack']
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TL_MODEL_PATH = os.path.join(BASE_DIR, "models", "mobilenetv3_transfer.keras")
-
-# -----------------------------------------------------------------------------
-# 3. Model Loading
-# -----------------------------------------------------------------------------
 @st.cache_resource
 def load_model():
     if not os.path.exists(TL_MODEL_PATH):
         st.error(f"❌ Missing model file at: `{TL_MODEL_PATH}`")
         st.stop()
     try:
-        model = tf.keras.models.load_model(TL_MODEL_PATH, compile=False, safe_mode=False)
+        # Load model using the custom object scope to bypass quantization_config errors
+        custom_objects = {"Dense": FixedDense}
+        model = tf.keras.models.load_model(
+            TL_MODEL_PATH, 
+            custom_objects=custom_objects,
+            compile=False, 
+            safe_mode=False
+        )
         return model
     except Exception as e:
-        st.error(f"Error loading model: {e}")
-        st.stop()
+        # Secondary fallback using native keras if tf.keras fails
+        try:
+            import keras
+            model = keras.models.load_model(TL_MODEL_PATH, compile=False, safe_mode=False)
+            return model
+        except Exception as e2:
+            st.error(f"Error loading model: {e2}")
+            st.stop()
 
 model = load_model()
 
