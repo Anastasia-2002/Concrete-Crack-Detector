@@ -1,3 +1,4 @@
+
 import os
 import numpy as np
 import streamlit as st
@@ -5,7 +6,7 @@ import tensorflow as tf
 from PIL import Image, ImageOps
 
 # -----------------------------------------------------------------------------
-# 1. Page Configuration
+# 1. Page Configuration & Title
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="Concrete Crack Detector",
@@ -17,7 +18,7 @@ st.title("🧱 Concrete Crack Detector")
 st.write("Upload an image of a concrete surface to detect whether it contains cracks.")
 
 # -----------------------------------------------------------------------------
-# 2. Path Resolution & Model Loading (Define BASE_DIR FIRST)
+# 2. Path Resolution & Model Loading
 # -----------------------------------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "models", "mobilenetv3_transfer.keras")
@@ -26,7 +27,7 @@ MODEL_PATH = os.path.join(BASE_DIR, "models", "mobilenetv3_transfer.keras")
 def load_crack_detector_model(path):
     if not os.path.exists(path):
         raise FileNotFoundError(
-            f"Model file not found at '{path}'. Please check that 'models/mobilenetv3_transfer.keras' "
+            f"Model file not found at '{path}'. Please ensure 'models/mobilenetv3_transfer.keras' "
             f"is uploaded to your GitHub repository."
         )
     return tf.keras.models.load_model(path, compile=False, safe_mode=False)
@@ -37,7 +38,6 @@ except Exception as e:
     st.error("⚠️ Error loading the model.")
     st.error(f"Details: {e}")
     st.stop()
-
 uploaded_file = st.file_uploader("Choose an image for classification...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
