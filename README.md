@@ -49,7 +49,37 @@ Concrete cracking is an early indicator of structural degradation in bridges, bu
 [ Classification & Masking ] ---> Crack Detection Probability + Region Isolation
 │
 ▼
-[ User Interface / API Output ] ---> Visualized Bounding Boxes & Health Report 
+[ User Interface / API Output ] ---> Visualized Bounding Boxes & Health Report
+
+## 🛠️ Tech Stack
+- Programming Language: Python 3.9+
+- Deep Learning / ML Frameworks: PyTorch / TensorFlow / Keras, Scikit-learn
+- Computer Vision: OpenCV, Pillow (PIL), Albumentations
+- Web Application / Interface: Streamlit / Flask, HTML5, CSS3, JavaScript
+- Data Manipulation & Visualization: NumPy, Pandas, Matplotlib, Seaborn
+- DevOps & Version Control: Git, GitHub, Docker
+
+---
+
+## 📊 Dataset
+The model is trained and validated on the standard Concrete Crack Images for Classification dataset (40,000 images divided into Positive [Cracked] and Negative [Uncracked] classes with 227x227 pixel resolution).
+
+---
+
+## 🚀 Installation & Setup
+
+### Prerequisites
+Ensure you have Python 3.8 or higher installed on your system.
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/Anastasia-2002/Concrete-Crack-Detector.git
+cd Concrete-Crack-Detector
+```
+
+---
+
+## 📈 Model Performance
 Metric,Performance Score
 Accuracy,98.4%
 Precision,98.1%
