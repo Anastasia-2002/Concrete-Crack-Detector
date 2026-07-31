@@ -14,3 +14,7 @@ venv/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Env / secrets / logs
+.env
+*.log

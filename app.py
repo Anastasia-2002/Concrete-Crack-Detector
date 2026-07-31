@@ -1,7 +1,7 @@
 import streamlit as st
 import tensorflow as tf
 import numpy as np
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 import os
 import pandas as pd
 
@@ -41,58 +41,65 @@ class CustomDense(tf.keras.layers.Dense):
 def load_model(model_path):
     """Loads a TensorFlow Keras model, handling potential custom objects."""
     custom_objects = {
-        'Dense': CustomDense # Register our custom Dense layer for loading
+        'Dense': CustomDense  # Register our custom Dense layer for loading
     }
     return tf.keras.models.load_model(model_path, custom_objects=custom_objects)
 
-# Paths to your saved models (relative to app.py in your GitHub repo)
-CNN_MODEL_PATH = 'models/custom_cnn.h5'
-TL_MODEL_PATH = 'models/mobilenetv3_transfer.h5'
 
-custom_cnn_model = None
-transfer_learning_model = None
+def check_input_shape(name, model):
+    """Warn (don't crash) if a model's expected input resolution drifts from
+    the IMAGE_HEIGHT/IMAGE_WIDTH constants used to preprocess uploads. This
+    is the exact class of silent mismatch that caused the double-normalization
+    bug this app previously shipped with -- fail loudly in the sidebar instead
+    of silently producing a wrong-but-confident prediction."""
+    try:
+        shape = model.input_shape  # e.g. (None, 128, 128, 3)
+        expected = (shape[1], shape[2])
+    except Exception:
+        return  # Shape not introspectable (e.g. exotic input spec) - skip check
+    if expected != (IMAGE_HEIGHT, IMAGE_WIDTH):
+        st.sidebar.warning(
+            f"⚠️ {name} expects input {expected}, but the app resizes uploads "
+            f"to {(IMAGE_HEIGHT, IMAGE_WIDTH)}. Predictions may be unreliable."
+        )
+
+
+# Model registry: add/remove entries here instead of duplicating load blocks.
+MODEL_REGISTRY = [
+    {"name": "Custom CNN", "path": "models/custom_cnn.h5"},
+    {"name": "MobileNetV3 Transfer Learning", "path": "models/mobilenetv3_transfer.h5"},
+]
+
+loaded_models = {}
 
 with st.spinner("Loading models..."):
-    if os.path.exists(CNN_MODEL_PATH):
+    for entry in MODEL_REGISTRY:
+        name, path = entry["name"], entry["path"]
+        if not os.path.exists(path):
+            st.sidebar.warning(f"{name} model not found at {path}")
+            continue
         try:
-            custom_cnn_model = load_model(CNN_MODEL_PATH)
-            st.sidebar.success("Loaded Custom CNN")
+            model = load_model(path)
+            check_input_shape(name, model)
+            loaded_models[name] = model
+            st.sidebar.success(f"Loaded {name}")
         except Exception as e:
-            st.sidebar.error(f"Error loading Custom CNN model: {e}")
-    else:
-        st.sidebar.warning(f"Custom CNN model not found at {CNN_MODEL_PATH}")
-
-    if os.path.exists(TL_MODEL_PATH):
-        try:
-            transfer_learning_model = load_model(TL_MODEL_PATH)
-            st.sidebar.success("Loaded MobileNetV3 Transfer Learning model")
-        except Exception as e:
-            st.sidebar.error(f"Error loading MobileNetV3 TL model: {e}")
-    else:
-        st.sidebar.warning(f"MobileNetV3 TL model not found at {TL_MODEL_PATH}")
+            st.sidebar.error(f"Error loading {name} model: {e}")
 
 
 # --- Sidebar for model selection ---
 st.sidebar.header("Model Selection")
 
-model_options = []
-if custom_cnn_model: model_options.append('Custom CNN')
-if transfer_learning_model: model_options.append('MobileNetV3 Transfer Learning')
-
 model_to_use = None
 selected_model_name = None
 
-if model_options:
+if loaded_models:
     selected_model_name = st.sidebar.radio(
         "Choose a model for prediction:",
-        model_options,
-        index=0 # Default to the first available model
+        list(loaded_models.keys()),
+        index=0  # Default to the first available model
     )
-
-    if selected_model_name == 'Custom CNN':
-        model_to_use = custom_cnn_model
-    elif selected_model_name == 'MobileNetV3 Transfer Learning':
-        model_to_use = transfer_learning_model
+    model_to_use = loaded_models[selected_model_name]
 else:
     st.error("No models were loaded. Please ensure model files are present in the 'models/' directory.")
 
@@ -102,7 +109,15 @@ st.header("Upload Image")
 uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None and model_to_use is not None:
-    image = Image.open(uploaded_file).convert('RGB')
+    try:
+        image = Image.open(uploaded_file).convert('RGB')
+    except UnidentifiedImageError:
+        st.error("That file doesn't look like a valid image. Please upload a JPG or PNG.")
+        st.stop()
+    except Exception as e:
+        st.error(f"Couldn't read the uploaded file: {e}")
+        st.stop()
+
     st.image(image, caption='Uploaded Image', use_container_width=True)
     st.write("")
 
@@ -115,8 +130,12 @@ if uploaded_file is not None and model_to_use is not None:
     img_array = np.array(image.resize((IMAGE_WIDTH, IMAGE_HEIGHT)), dtype=np.float32)
     img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
 
-    with st.spinner("Predicting..."):
-        predictions = model_to_use.predict(img_array)
+    try:
+        with st.spinner("Predicting..."):
+            predictions = model_to_use.predict(img_array)
+    except Exception as e:
+        st.error(f"Prediction failed: {e}")
+        st.stop()
 
     # Determine if output is single sigmoid neuron or 2-class softmax
     if model_to_use.output_shape[-1] == 1:
@@ -133,11 +152,13 @@ if uploaded_file is not None and model_to_use is not None:
     confidence_pct = confidence * 100.0
 
     st.subheader("Prediction Results")
-    st.markdown(
-        f"The model predicts: **<span style='color:blue;'>{predicted_class_name}</span>** "
-        f"with a confidence of **{confidence_pct:.2f}%**", 
-        unsafe_allow_html=True
-    )
+    # Semantic, accessible result display (no injected HTML/CSS): red/warning
+    # for a detected crack, green/success otherwise.
+    if predicted_class_name == "Cracked":
+        st.error(f"⚠️ The model predicts: **{predicted_class_name}**")
+    else:
+        st.success(f"✅ The model predicts: **{predicted_class_name}**")
+    st.metric("Confidence", f"{confidence_pct:.2f}%")
 
     # Display raw prediction scores
     st.write("Raw prediction scores:")
