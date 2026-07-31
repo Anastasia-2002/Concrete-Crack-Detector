@@ -19,7 +19,7 @@ st.set_page_config(
 )
 
 st.title("🔍 Crack Detection Application")
-st.write("Upload an image and let the models predict if it's a Deck or a Wall.")
+st.write("Upload an image and let the models predict if it's cracked or non cracked.")
 
 # Custom object to handle potential 'quantization_config' issue during model loading
 class CustomDense(tf.keras.layers.Dense):
