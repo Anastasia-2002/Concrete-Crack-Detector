@@ -1,43 +1,41 @@
-
+import os
+import numpy as np
 import streamlit as st
 import tensorflow as tf
-import numpy as np
-from PIL import Image
-import os
+from PIL import Image, ImageOps
 
-st.set_page_config(page_title="Image Classification App", layout="centered")
-st.title("Image Classification: Cracked vs. Non-cracked Decks")
-st.write("Upload an image to classify it as 'Cracked' or 'Non-cracked' using two trained models.")
+# -----------------------------------------------------------------------------
+# 1. Page Configuration
+# -----------------------------------------------------------------------------
+st.set_page_config(
+    page_title="Concrete Crack Detector",
+    page_icon="🧱",
+    layout="centered"
+)
 
-IMAGE_HEIGHT = 128
-IMAGE_WIDTH = 128
-class_names = ['Cracked', 'Non-cracked']
-CNN_MODEL_PATH = 'models/custom_cnn.keras'
-TL_MODEL_PATH = 'models/mobilenetv3_transfer.keras'
-# Match this filename to the exact file inside your GitHub models/ folder
+st.title("🧱 Concrete Crack Detector")
+st.write("Upload an image of a concrete surface to detect whether it contains cracks.")
+
+# -----------------------------------------------------------------------------
+# 2. Path Resolution & Model Loading (Define BASE_DIR FIRST)
+# -----------------------------------------------------------------------------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "models", "mobilenetv3_transfer.keras")
 
 @st.cache_resource
-def load_models():
-    st.spinner("Loading models...")
-    try:
-        if not os.path.exists(CNN_MODEL_PATH):
-            st.error(f"Model file not found: {CNN_MODEL_PATH}")
-            return None, None
-        if not os.path.exists(TL_MODEL_PATH):
-            st.error(f"Model file not found: {TL_MODEL_PATH}")
-            return None, None
-        cnn_model = tf.keras.models.load_model(CNN_MODEL_PATH)
-        tl_model = tf.keras.models.load_model(TL_MODEL_PATH)
-        st.success("Models loaded successfully!")
-        return cnn_model, tl_model
-    except Exception as e:
-        st.error(f"Error loading models: {e}")
-        return None, None
+def load_crack_detector_model(path):
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            f"Model file not found at '{path}'. Please check that 'models/mobilenetv3_transfer.keras' "
+            f"is uploaded to your GitHub repository."
+        )
+    return tf.keras.models.load_model(path, compile=False, safe_mode=False)
 
-cnn_model, tl_model = load_models()
-
-if cnn_model is None or tl_model is None:
+try:
+    model = load_crack_detector_model(MODEL_PATH)
+except Exception as e:
+    st.error("⚠️ Error loading the model.")
+    st.error(f"Details: {e}")
     st.stop()
 
 uploaded_file = st.file_uploader("Choose an image for classification...", type=["jpg", "jpeg", "png"])
