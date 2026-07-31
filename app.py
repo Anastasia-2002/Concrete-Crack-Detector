@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image
 import os
 import shutil # Added for copying directories
+import keras # Added keras import for explicit model loading
 
 # --- Streamlit App Configuration ---
 st.set_page_config(page_title="Image Classification App", layout="centered")
@@ -26,6 +27,7 @@ def load_models():
     """Loads the trained Keras models with Streamlit's caching."""
     with st.spinner("Loading models..."):
         try:
+            st.info(f"TensorFlow version in app: {tf.__version__}") # Added for debugging
             if not os.path.exists(CNN_MODEL_PATH):
                 st.error(f"Model file not found: {CNN_MODEL_PATH}")
                 return None, None
@@ -33,12 +35,13 @@ def load_models():
                 st.error(f"Model file not found: {TL_MODEL_PATH}")
                 return None, None
 
-            cnn_model = tf.keras.models.load_model(CNN_MODEL_PATH)
-            tl_model = tf.keras.models.load_model(TL_MODEL_PATH)
+            # Using keras.saving.load_model for explicit Keras 3 model loading
+            cnn_model = keras.saving.load_model(CNN_MODEL_PATH)
+            tl_model = keras.saving.load_model(TL_MODEL_PATH)
             st.success("Models loaded successfully!")
             return cnn_model, tl_model
         except Exception as e:
-            st.error(f"Error loading models: {e}. Please ensure '{CNN_MODEL_PATH}' and '{TL_MODEL_PATH}' exist.")
+            st.error(f"Error loading models: {e}. Please ensure '{CNN_MODEL_PATH}' and '{TL_MODEL_PATH}' exist, and that Keras versions are compatible.")
             return None, None
 
 cnn_model, tl_model = load_models()
@@ -117,6 +120,7 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 import os
+import keras # Added keras import for explicit model loading
 
 st.set_page_config(page_title="Image Classification App", layout="centered")
 st.title("Image Classification: Cracked vs. Non-cracked Decks")
@@ -133,18 +137,20 @@ TL_MODEL_PATH = 'models/mobilenetv3_transfer.keras'
 def load_models():
     with st.spinner("Loading models..."):
         try:
+            st.info(f"TensorFlow version in app: {tf.__version__}") # Added for debugging
             if not os.path.exists(CNN_MODEL_PATH):
                 st.error(f"Model file not found: {CNN_MODEL_PATH}")
                 return None, None
             if not os.path.exists(TL_MODEL_PATH):
                 st.error(f"Model file not found: {TL_MODEL_PATH}")
                 return None, None
-            cnn_model = tf.keras.models.load_model(CNN_MODEL_PATH)
-            tl_model = tf.keras.models.load_model(TL_MODEL_PATH)
+            # Using keras.saving.load_model for explicit Keras 3 model loading
+            cnn_model = keras.saving.load_model(CNN_MODEL_PATH)
+            tl_model = keras.saving.load_model(TL_MODEL_PATH)
             st.success("Models loaded successfully!")
             return cnn_model, tl_model
         except Exception as e:
-            st.error(f"Error loading models: {e}")
+            st.error(f"Error loading models: {e}. Please ensure '{CNN_MODEL_PATH}' and '{TL_MODEL_PATH}' exist, and that Keras versions are compatible.")
             return None, None
 
 cnn_model, tl_model = load_models()
@@ -192,6 +198,7 @@ streamlit
 tensorflow
 numpy
 Pillow
+keras # Added keras to requirements
 """
 with open(requirements_file_path, 'w') as f:
     f.write(requirements_content)
