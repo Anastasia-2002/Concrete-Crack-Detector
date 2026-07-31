@@ -14,6 +14,8 @@ IMAGE_WIDTH = 128
 class_names = ['Cracked', 'Non-cracked']
 CNN_MODEL_PATH = 'models/custom_cnn.keras'
 TL_MODEL_PATH = 'models/mobilenetv3_transfer.keras'
+# Match this filename to the exact file inside your GitHub models/ folder
+MODEL_PATH = os.path.join(BASE_DIR, "models", "mobilenetv3_transfer.keras")
 
 @st.cache_resource
 def load_models():
