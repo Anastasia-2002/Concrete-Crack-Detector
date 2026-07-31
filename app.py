@@ -17,7 +17,7 @@ class_names = ['Decks', 'Walls'] # Ensure this order matches your model's output
 
 # Path to saved models (ensure these paths are correct relative to where app.py is run)
 # Assuming models are in a 'models' directory in the same location as app.py
-CNN_MODEL_PATH = '/content/models/custom_cnn.keras'
+CNN_MODEL_PATH = '/models/custom_cnn.keras'
 TL_MODEL_PATH = '/content/models/mobilenetv3_transfer.keras'
 
 # --- Model Loading with Caching ---
