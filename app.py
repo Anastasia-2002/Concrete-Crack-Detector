@@ -5,7 +5,25 @@ import tensorflow as tf
 from PIL import Image
 
 # -----------------------------------------------------------------------------
-# Custom Deserializer Fix for Keras 3 Compatibility
+# 1. Page Configuration & Title
+# -----------------------------------------------------------------------------
+st.set_page_config(page_title="Concrete Crack Detector", page_icon="🧱", layout="centered")
+
+st.title("🧱 Concrete Crack Detector")
+st.write("Upload an image of a concrete surface to detect whether it contains cracks.")
+
+# -----------------------------------------------------------------------------
+# 2. Parameters & Model Path (MUST BE DEFINED BEFORE LOAD_MODEL)
+# -----------------------------------------------------------------------------
+IMAGE_HEIGHT = 224
+IMAGE_WIDTH = 224
+CLASS_NAMES = ['Decks', 'Walls']  # Adjust if your classes are ['No Crack', 'Crack']
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TL_MODEL_PATH = os.path.join(BASE_DIR, "models", "mobilenetv3_transfer.keras")
+
+# -----------------------------------------------------------------------------
+# 3. Custom Layer for Keras 3 Compatibility & Model Loader
 # -----------------------------------------------------------------------------
 class FixedDense(tf.keras.layers.Dense):
     @classmethod
@@ -19,7 +37,6 @@ def load_model():
         st.error(f"❌ Missing model file at: `{TL_MODEL_PATH}`")
         st.stop()
     try:
-        # Load model using the custom object scope to bypass quantization_config errors
         custom_objects = {"Dense": FixedDense}
         model = tf.keras.models.load_model(
             TL_MODEL_PATH, 
@@ -29,7 +46,6 @@ def load_model():
         )
         return model
     except Exception as e:
-        # Secondary fallback using native keras if tf.keras fails
         try:
             import keras
             model = keras.models.load_model(TL_MODEL_PATH, compile=False, safe_mode=False)
@@ -38,10 +54,11 @@ def load_model():
             st.error(f"Error loading model: {e2}")
             st.stop()
 
+# Load the model
 model = load_model()
 
 # -----------------------------------------------------------------------------
-# 4. Inference Logic
+# 4. Image Upload & Classification Logic
 # -----------------------------------------------------------------------------
 uploaded_file = st.file_uploader("Choose an image for classification...", type=["jpg", "jpeg", "png"])
 
@@ -50,7 +67,6 @@ if uploaded_file is not None:
     st.image(image, caption='Uploaded Image', use_column_width=True)
     st.write("Classifying...")
 
-    # Preprocess image
     img_resized = image.resize((IMAGE_WIDTH, IMAGE_HEIGHT))
     img_array = tf.keras.utils.img_to_array(img_resized)
     img_array = np.expand_dims(img_array, axis=0)
