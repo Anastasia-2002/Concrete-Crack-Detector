@@ -3,7 +3,14 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 import os
+import os
+import tensorflow as tf
 
+# Get absolute path to the directory containing app.py
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "models", "custom_cnn.keras")
+
+model = tf.keras.models.load_model(MODEL_PATH)
 # --- Streamlit App Configuration --- #
 st.set_page_config(page_title="Image Classification App", layout="centered")
 
