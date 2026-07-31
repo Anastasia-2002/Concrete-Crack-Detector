@@ -101,3 +101,12 @@ if uploaded_file is not None:
     except Exception as err:
         st.error("⚠️ Invalid file format. Please upload a valid image file.")
         st.exception(err)
+@st.cache_resource
+def load_crack_detector_model(path):
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            f"Model file not found at '{path}'. Please check that 'models/custom_cnn.keras' "
+            f"is uploaded to your GitHub repository."
+        )
+    # compile=False skips deserializing optimizer & quantization metadata
+    return tf.keras.models.load_model(path, compile=False, safe_mode=False)
