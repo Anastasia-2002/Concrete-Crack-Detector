@@ -1,4 +1,3 @@
-
 import streamlit as st
 import tensorflow as tf
 import numpy as np
@@ -22,15 +21,33 @@ st.set_page_config(
 st.title("🔍 Crack Detection Application")
 st.write("Upload an image and let the models predict if it's a Deck or a Wall.")
 
+# Custom object to handle potential 'quantization_config' issue during model loading
+class CustomDense(tf.keras.layers.Dense):
+    def __init__(self, units, activation=None, use_bias=True,
+                 kernel_initializer='glorot_uniform', bias_initializer='zeros',
+                 kernel_regularizer=None, bias_regularizer=None,
+                 activity_regularizer=None, kernel_constraint=None,
+                 bias_constraint=None, **kwargs):
+        # Filter out unrecognized kwargs like 'quantization_config'
+        kwargs.pop('quantization_config', None)
+        super().__init__(units, activation=activation, use_bias=use_bias,
+                         kernel_initializer=kernel_initializer, bias_initializer=bias_initializer,
+                         kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer,
+                         activity_regularizer=activity_regularizer, kernel_constraint=kernel_constraint,
+                         bias_constraint=bias_constraint, **kwargs)
+
 # --- Model Loading ---
 @st.cache_resource
 def load_model(model_path):
-    """Loads a TensorFlow Keras model."""
-    return tf.keras.models.load_model(model_path)
+    """Loads a TensorFlow Keras model, handling potential custom objects."""
+    custom_objects = {
+        'Dense': CustomDense # Register our custom Dense layer for loading
+    }
+    return tf.keras.models.load_model(model_path, custom_objects=custom_objects)
 
 # Paths to your saved models (assuming they are in the same directory as app.py or accessible)
-CNN_MODEL_PATH = 'custom_cnn.h5'
-TL_MODEL_PATH = 'mobilenetv3_transfer.h5'
+CNN_MODEL_PATH = 'models/custom_cnn.h5'
+TL_MODEL_PATH = 'models/mobilenetv3_transfer.h5'
 
 custom_cnn_model = None
 transfer_learning_model = None
@@ -44,7 +61,6 @@ with st.spinner("Loading models..."):
             st.sidebar.error(f"Error loading Custom CNN model: {e}")
     else:
         st.sidebar.warning(f"Custom CNN model not found at {CNN_MODEL_PATH}")
-
     if os.path.exists(TL_MODEL_PATH):
         try:
             transfer_learning_model = load_model(TL_MODEL_PATH)
@@ -120,9 +136,6 @@ if uploaded_file is not None and model_to_use is not None:
 st.sidebar.markdown("""
 ---
 ### How to Run this App:
-1.  **Mount your Google Drive** in Colab if not already mounted.
-2.  Ensure the `models` directory and this `app.py` are in the same folder.
-3.  Open your terminal or Google Colab terminal.
-4.  Navigate to the directory where `app.py` is saved.
-5.  Run `streamlit run app.py`
+1.  **Ensure you have `custom_cnn.h5` and `mobilenetv3_transfer.h5` in a folder named `models/` in the same directory as this `app.py` in your GitHub repository.**
+2.  Deploy your GitHub repository containing this `app.py` and the `models/` folder to Streamlit.
 """)
