@@ -1,16 +1,13 @@
-app_py_content = '''
 import streamlit as st
 import tensorflow as tf
 import numpy as np
 from PIL import Image
 import os
-import pandas as pd # Added for DataFrame display
+import pandas as pd
 
 # Define constants (should match your training setup)
 IMAGE_HEIGHT = 128
 IMAGE_WIDTH = 128
-# Updated CLASS_NAMES to reflect the desired prediction labels: Cracked vs Non-cracked
-# Assuming model output 0 corresponds to 'Decks' (now 'Cracked') and 1 to 'Walls' (now 'Non-cracked')
 CLASS_NAMES = ['Cracked', 'Non-cracked']
 
 # --- Page Configuration ---
@@ -48,7 +45,7 @@ def load_model(model_path):
     }
     return tf.keras.models.load_model(model_path, custom_objects=custom_objects)
 
-# Paths to your saved models (assuming they are in the 'models' subdirectory relative to app.py)
+# Paths to your saved models (relative to app.py in your GitHub repo)
 CNN_MODEL_PATH = 'models/custom_cnn.h5'
 TL_MODEL_PATH = 'models/mobilenetv3_transfer.h5'
 
@@ -59,7 +56,7 @@ with st.spinner("Loading models..."):
     if os.path.exists(CNN_MODEL_PATH):
         try:
             custom_cnn_model = load_model(CNN_MODEL_PATH)
-            st.sidebar.success(f"Loaded Custom CNN")
+            st.sidebar.success("Loaded Custom CNN")
         except Exception as e:
             st.sidebar.error(f"Error loading Custom CNN model: {e}")
     else:
@@ -68,7 +65,7 @@ with st.spinner("Loading models..."):
     if os.path.exists(TL_MODEL_PATH):
         try:
             transfer_learning_model = load_model(TL_MODEL_PATH)
-            st.sidebar.success(f"Loaded MobileNetV3 Transfer Learning model")
+            st.sidebar.success("Loaded MobileNetV3 Transfer Learning model")
         except Exception as e:
             st.sidebar.error(f"Error loading MobileNetV3 TL model: {e}")
     else:
@@ -97,7 +94,7 @@ if model_options:
     elif selected_model_name == 'MobileNetV3 Transfer Learning':
         model_to_use = transfer_learning_model
 else:
-    st.error("No models were loaded. Please ensure model files are present in the 'models' subdirectory.")
+    st.error("No models were loaded. Please ensure model files are present in the 'models/' directory.")
 
 
 # --- Image Upload and Prediction ---
@@ -109,60 +106,47 @@ if uploaded_file is not None and model_to_use is not None:
     st.image(image, caption='Uploaded Image', use_column_width=True)
     st.write("")
 
-    # Preprocess image for prediction
-    img_array = np.array(image.resize((IMAGE_WIDTH, IMAGE_HEIGHT)))
+    # Preprocess image for prediction (Resized + Scaled to [0, 1])
+    img_array = np.array(image.resize((IMAGE_WIDTH, IMAGE_HEIGHT))) / 255.0
     img_array = np.expand_dims(img_array, axis=0) # Add batch dimension
 
     with st.spinner("Predicting..."):
         predictions = model_to_use.predict(img_array)
 
-    # Determine if it's binary (sigmoid) or multiclass (softmax)
-    if model_to_use.output_shape[-1] == 1: # Assuming binary classification with a single output neuron
-        score = predictions[0][0]
-        predicted_class_index = 1 if score >= 0.5 else 0 # Assuming 1 is the positive class
-        confidence = score if predicted_class_index == 1 else (1 - score)
-    else: # Multiclass classification with softmax output (e.g., num_classes > 1 in output layer)
-        predicted_class_index = np.argmax(predictions)
-        confidence = np.max(predictions)
+    # Determine if output is single sigmoid neuron or 2-class softmax
+    if model_to_use.output_shape[-1] == 1:
+        score = float(predictions[0][0])
+        predicted_class_index = 1 if score >= 0.5 else 0
+        confidence = score if predicted_class_index == 1 else (1.0 - score)
+        probs = [1.0 - score, score]
+    else:
+        probs = predictions[0]
+        predicted_class_index = int(np.argmax(probs))
+        confidence = float(probs[predicted_class_index])
 
     predicted_class_name = CLASS_NAMES[predicted_class_index]
+    confidence_pct = confidence * 100.0
 
     st.subheader("Prediction Results")
-    st.markdown(f"The model predicts: **<span style='color:blue;'>{predicted_class_name}</span>** with a confidence of **{confidence:.2f}%**", unsafe_allow_html=True)
+    st.markdown(
+        f"The model predicts: **<span style='color:blue;'>{predicted_class_name}</span>** "
+        f"with a confidence of **{confidence_pct:.2f}%**", 
+        unsafe_allow_html=True
+    )
 
-    # Display raw prediction scores (optional)
+    # Display raw prediction scores
     st.write("Raw prediction scores:")
-    pred_df = pd.DataFrame({"Class": CLASS_NAMES, "Probability": predictions[0]})
+    pred_df = pd.DataFrame({"Class": CLASS_NAMES, "Probability": probs})
     st.dataframe(pred_df.style.format({'Probability': '{:.4f}'}))
 
 
-# --- Instructions to run the app ---
+# --- Sidebar Instructions ---
 st.sidebar.markdown("""
 ---
 ### How to Run this App:
-1.  **Ensure your GitHub repository contains:**
-    *   `app.py` (this file)
-    *   A `models/` directory containing `custom_cnn.h5` and `mobilenetv3_transfer.h5`
-    *   `requirements.txt` with `streamlit`, `tensorflow`, `numpy`, `Pillow`, and `pandas`
-2.  Deploy your GitHub repository to Streamlit Cloud.
+1. Ensure your GitHub repository contains:
+    * `app.py` (this file)
+    * A `models/` directory containing `custom_cnn.h5` and `mobilenetv3_transfer.h5`
+    * `requirements.txt` with `streamlit`, `tensorflow`, `numpy`, `Pillow`, and `pandas`
+2. Deploy your GitHub repository to Streamlit Cloud.
 """)
-'''
-
-# Define the directory in Google Drive where you might save for local testing
-drive_path = '/content/drive/MyDrive/streamlit_model_deployment'
-
-# Create the directory in Google Drive if it doesn't exist
-if not os.path.exists(drive_path):
-    os.makedirs(drive_path)
-    print(f"Created directory: {drive_path}")
-else:
-    print(f"Directory already exists: {drive_path}")
-
-# Write the Streamlit app code to a file in the Google Drive directory
-app_file_path = os.path.join(drive_path, 'app.py')
-with open(app_file_path, 'w') as f:
-    f.write(app_py_content)
-print(f"Streamlit app.py saved to: {app_file_path} for your reference and local testing.")
-
-# Reminder about GitHub update
-print("\n*** IMPORTANT: Please update your `app.py` file on your GitHub repository with the content provided in this cell! ***")
