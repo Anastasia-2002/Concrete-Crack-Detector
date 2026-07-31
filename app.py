@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import streamlit as st
-import tensorflow as tf
+import keras
 from PIL import Image
 
 # -----------------------------------------------------------------------------
@@ -13,52 +13,35 @@ st.title("🧱 Concrete Crack Detector")
 st.write("Upload an image of a concrete surface to detect whether it contains cracks.")
 
 # -----------------------------------------------------------------------------
-# 2. Parameters & Model Path (MUST BE DEFINED BEFORE LOAD_MODEL)
+# 2. Parameters & Model Paths
 # -----------------------------------------------------------------------------
 IMAGE_HEIGHT = 224
 IMAGE_WIDTH = 224
-CLASS_NAMES = ['Decks', 'Walls']  # Adjust if your classes are ['No Crack', 'Crack']
+CLASS_NAMES = ['Decks', 'Walls']  # Update if your labels are ['No Crack', 'Crack']
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TL_MODEL_PATH = os.path.join(BASE_DIR, "models", "mobilenetv3_transfer.keras")
 
 # -----------------------------------------------------------------------------
-# 3. Custom Layer for Keras 3 Compatibility & Model Loader
+# 3. Keras 3 Direct Model Loader
 # -----------------------------------------------------------------------------
-class FixedDense(tf.keras.layers.Dense):
-    @classmethod
-    def from_config(cls, config):
-        config.pop('quantization_config', None)
-        return super().from_config(config)
-
 @st.cache_resource
 def load_model():
     if not os.path.exists(TL_MODEL_PATH):
         st.error(f"❌ Missing model file at: `{TL_MODEL_PATH}`")
         st.stop()
     try:
-        custom_objects = {"Dense": FixedDense}
-        model = tf.keras.models.load_model(
-            TL_MODEL_PATH, 
-            custom_objects=custom_objects,
-            compile=False, 
-            safe_mode=False
-        )
+        # Load directly via standalone Keras 3 to fix quantization_config deserialization
+        model = keras.models.load_model(TL_MODEL_PATH, compile=False)
         return model
     except Exception as e:
-        try:
-            import keras
-            model = keras.models.load_model(TL_MODEL_PATH, compile=False, safe_mode=False)
-            return model
-        except Exception as e2:
-            st.error(f"Error loading model: {e2}")
-            st.stop()
+        st.error(f"Error loading model with Keras 3: {e}")
+        st.stop()
 
-# Load the model
 model = load_model()
 
 # -----------------------------------------------------------------------------
-# 4. Image Upload & Classification Logic
+# 4. Classification & Prediction
 # -----------------------------------------------------------------------------
 uploaded_file = st.file_uploader("Choose an image for classification...", type=["jpg", "jpeg", "png"])
 
@@ -67,8 +50,9 @@ if uploaded_file is not None:
     st.image(image, caption='Uploaded Image', use_column_width=True)
     st.write("Classifying...")
 
+    # Preprocess image
     img_resized = image.resize((IMAGE_WIDTH, IMAGE_HEIGHT))
-    img_array = tf.keras.utils.img_to_array(img_resized)
+    img_array = np.array(img_resized, dtype=np.float32)
     img_array = np.expand_dims(img_array, axis=0)
 
     st.subheader("Prediction Results:")
@@ -76,6 +60,7 @@ if uploaded_file is not None:
     try:
         predictions = model.predict(img_array, verbose=0)
         
+        # Handle binary vs multi-node output
         if predictions.shape[-1] == 1:
             score = float(predictions[0][0])
             idx = 1 if score > 0.5 else 0
